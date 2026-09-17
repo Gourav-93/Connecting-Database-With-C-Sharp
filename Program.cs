@@ -1,7 +1,17 @@
-﻿using StudentManagementSystem.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using StudentManagementSystem.Data;
 using StudentManagementSystem.Services;
+using StudentManagementSystem.Models;
 
-StudentService studentService = new StudentService();
+var options = new DbContextOptionsBuilder<StudentDbContext>()
+    .UseMySQL(
+    "Server=localhost;Port=3306;Database=StudentManagementDb;User=root;Password=Gourav;"
+)
+    .Options;
+
+using var context = new StudentDbContext(options);
+
+StudentService studentService = new StudentService(context);
 
 while (true)
 {

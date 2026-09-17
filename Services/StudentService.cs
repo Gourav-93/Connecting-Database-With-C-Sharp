@@ -1,118 +1,115 @@
-using System.Text.Json;
+using StudentManagementSystem.Data;
 using StudentManagementSystem.Models;
 
-namespace StudentManagementSystem.Services;
-
-public class StudentService
+namespace StudentManagementSystem.Services
 {
-    private readonly string filePath = "Data/students.json";
-
-    private List<Student> students = new();
-
-    public StudentService()
+    public class StudentService
     {
-        LoadData();
-    }
+        private readonly StudentDbContext _context;
 
-    public void AddStudent(Student student)
-    {
-        student.CalculateResult();
-
-        students.Add(student);
-
-        SaveData();
-
-        Console.WriteLine("\nStudent added successfully!");
-    }
-
-    public List<Student> GetAllStudents()
-    {
-        return students;
-    }
-
-    public Student? GetStudentById(int id)
-    {
-        return students.FirstOrDefault(s => s.Id == id);
-    }
-
-    public List<Student> SearchStudents(string name)
-    {
-        return students
-            .Where(s => s.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
-
-    public void UpdateStudent(int id, string name, int age, string course, double marks)
-    {
-        Student? student = GetStudentById(id);
-
-        if (student == null)
+        public StudentService(StudentDbContext context)
         {
-            Console.WriteLine("\nStudent not found!");
-            return;
+            _context = context;
         }
 
-        student.Name = name;
-        student.Age = age;
-        student.Course = course;
-        student.Marks = marks;
-
-        student.CalculateResult();
-
-        SaveData();
-
-        Console.WriteLine("\nStudent updated successfully!");
-    }
-
-    public void DeleteStudent(int id)
-    {
-        Student? student = GetStudentById(id);
-
-        if (student == null)
+        // Get all students
+        public List<Student> GetAllStudents()
         {
-            Console.WriteLine("\nStudent not found!");
-            return;
+            return _context.Students.ToList();
         }
 
-        students.Remove(student);
-
-        SaveData();
-
-        Console.WriteLine("\nStudent deleted successfully!");
-    }
-
-    public Student? GetTopper()
-    {
-        return students
-            .OrderByDescending(s => s.Percentage)
-            .FirstOrDefault();
-    }
-
-    private void SaveData()
-    {
-        string json = JsonSerializer.Serialize(
-            students,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-
-        File.WriteAllText(filePath, json);
-    }
-
-    private void LoadData()
-    {
-        if (!File.Exists(filePath))
+        // Get student by ID
+        public Student? GetStudentById(int id)
         {
-            return;
+            return _context.Students
+                .FirstOrDefault(s => s.Id == id);
         }
 
-        string json = File.ReadAllText(filePath);
-
-        if (!string.IsNullOrWhiteSpace(json))
+        // Add student
+        public void AddStudent(Student student)
         {
-            students = JsonSerializer.Deserialize<List<Student>>(json)
-                       ?? new List<Student>();
+            student.CalculateResult();
+
+            _context.Students.Add(student);
+            _context.SaveChanges();
+        }
+
+        // Update student - object version
+        public bool UpdateStudent(Student student)
+        {
+            var existingStudent = _context.Students
+                .FirstOrDefault(s => s.Id == student.Id);
+
+            if (existingStudent == null)
+                return false;
+
+            existingStudent.Name = student.Name;
+            existingStudent.Age = student.Age;
+            existingStudent.Course = student.Course;
+            existingStudent.Marks = student.Marks;
+
+            existingStudent.CalculateResult();
+
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        // Update student - parameter version
+        public bool UpdateStudent(
+            int id,
+            string name,
+            int age,
+            string course,
+            double marks)
+        {
+            var existingStudent = _context.Students
+                .FirstOrDefault(s => s.Id == id);
+
+            if (existingStudent == null)
+                return false;
+
+            existingStudent.Name = name;
+            existingStudent.Age = age;
+            existingStudent.Course = course;
+            existingStudent.Marks = marks;
+
+            existingStudent.CalculateResult();
+
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        // Delete student
+        public bool DeleteStudent(int id)
+        {
+            var student = _context.Students
+                .FirstOrDefault(s => s.Id == id);
+
+            if (student == null)
+                return false;
+
+            _context.Students.Remove(student);
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        // Search students by name
+        public List<Student> SearchStudents(string name)
+        {
+            return _context.Students
+                .Where(s => s.Name.ToLower().Contains(name.ToLower()))
+                .ToList();
+        }
+
+        // Get topper
+        public Student? GetTopper()
+        {
+            return _context.Students
+                .OrderByDescending(s => s.Marks)
+                .FirstOrDefault();
         }
     }
 }
